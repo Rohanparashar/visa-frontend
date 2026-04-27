@@ -417,6 +417,8 @@ function AdminScreen({ onBack }) {
   const [newItem, setNewItem]   = useState({});
   const [formVisible, setFormVisible] = useState(false);
   const [saveMsg, setSaveMsg]   = useState("");
+  const [editingRow, setEditingRow] = useState(null);   // holds the row being edited
+  const [editItem, setEditItem] = useState({});          // holds edited field values
 
   const TABS = [
     { id: "visa-types",        label: "Visa types",        table: "visa_types" },
@@ -479,6 +481,36 @@ function AdminScreen({ onBack }) {
       method: "DELETE", headers: { Authorization: `Bearer ${token}` }
     });
     loadTab(activeTab);
+  }
+
+  function startEdit(row) {
+    setEditingRow(row.id);
+    setEditItem({ ...row });
+    setFormVisible(false); // close add form if open
+  }
+
+  function cancelEdit() {
+    setEditingRow(null);
+    setEditItem({});
+  }
+
+  async function saveEdit() {
+    if (!editingRow) return;
+    const res = await fetch(`${API}/api/admin/${activeTab}/${editingRow}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(editItem)
+    });
+    const data = await res.json();
+    if (data.id || data.success || data.name || data.content) {
+      setSaveMsg("Updated successfully.");
+      setTimeout(() => setSaveMsg(""), 3000);
+      setEditingRow(null);
+      setEditItem({});
+      loadTab(activeTab);
+    } else {
+      setSaveMsg("Error saving: " + (data.error || "unknown"));
+    }
   }
 
   async function saveNew() {
@@ -631,22 +663,61 @@ function AdminScreen({ onBack }) {
               </thead>
               <tbody>
                 {rows.map((row, i) => (
-                  <tr key={row.id || i} style={{ background: i%2===0?"#fff":"#fafaf8" }}>
-                    {columns.map(col => (
-                      <td key={col} style={st.td}>
-                        {typeof row[col] === "boolean"
-                          ? (row[col] ? "Yes" : "No")
-                          : typeof row[col] === "object"
-                            ? JSON.stringify(row[col])
-                            : String(row[col]||"")}
-                      </td>
-                    ))}
-                    {activeTab !== "audit-log" && (
-                      <td style={st.td}>
-                        <button style={st.delBtn} onClick={() => deleteRow(row.id)}>Delete</button>
-                      </td>
+                  <>
+                    <tr key={row.id || i} style={{ background: i%2===0?"#fff":"#fafaf8" }}>
+                      {columns.map(col => (
+                        <td key={col} style={st.td}>
+                          {typeof row[col] === "boolean"
+                            ? (row[col] ? "Yes" : "No")
+                            : typeof row[col] === "object"
+                              ? JSON.stringify(row[col])
+                              : String(row[col]||"")}
+                        </td>
+                      ))}
+                      {activeTab !== "audit-log" && (
+                        <td style={st.td}>
+                          <div style={{ display:"flex", gap:4 }}>
+                            <button style={st.editBtn} onClick={() => startEdit(row)}>Edit</button>
+                            <button style={st.delBtn} onClick={() => deleteRow(row.id)}>Delete</button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                    {editingRow === row.id && (
+                      <tr key={`edit-${row.id}`}>
+                        <td colSpan={columns.length + 1} style={{ padding:"10px 8px", background:"#F0F7FF", borderBottom:"0.5px solid #B5D4F4" }}>
+                          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                            <p style={{ fontSize:12, fontWeight:500, color:"#0C447C", marginBottom:4 }}>Editing entry — change the fields below and click Save:</p>
+                            {getFormFields(activeTab, visaTypes).map(field => (
+                              <div key={field.key} style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
+                                <span style={{ fontSize:11, color:"#666", minWidth:120, paddingTop:8, flexShrink:0 }}>{field.label}:</span>
+                                {field.type === "select" ? (
+                                  <select style={{ ...st.input, maxWidth:400 }}
+                                    value={editItem[field.key]||""}
+                                    onChange={e => setEditItem(p=>({...p,[field.key]:e.target.value}))}>
+                                    <option value="">Select...</option>
+                                    {field.options.map(o => <option key={o} value={o}>{o}</option>)}
+                                  </select>
+                                ) : field.type === "textarea" ? (
+                                  <textarea style={{ ...st.input, minHeight:60, resize:"vertical", maxWidth:400 }}
+                                    value={editItem[field.key]||""}
+                                    onChange={e => setEditItem(p=>({...p,[field.key]:e.target.value}))} />
+                                ) : (
+                                  <input style={{ ...st.input, maxWidth:400 }} type="text"
+                                    value={editItem[field.key]||""}
+                                    onChange={e => setEditItem(p=>({...p,[field.key]:e.target.value}))} />
+                                )}
+                              </div>
+                            ))}
+                            <div style={{ display:"flex", gap:8, marginTop:4 }}>
+                              <button style={st.primaryBtn} onClick={saveEdit}>Save changes</button>
+                              <button style={st.backBtn} onClick={cancelEdit}>Cancel</button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </tr>
+                  </>
                 ))}
               </tbody>
             </table>
@@ -793,4 +864,5 @@ const st = {
   th:           { textAlign:"left", padding:"6px 8px", fontSize:11, fontWeight:500, color:"#888", borderBottom:"0.5px solid #e0e0e0", whiteSpace:"nowrap" },
   td:           { padding:"6px 8px", fontSize:12, color:"#333", borderBottom:"0.5px solid #f0f0f0", verticalAlign:"top", maxWidth:200, overflow:"hidden", textOverflow:"ellipsis" },
   delBtn:       { padding:"2px 8px", fontSize:11, border:"0.5px solid #f09595", borderRadius:6, background:"#FCEBEB", color:"#A32D2D", cursor:"pointer" },
+  editBtn:      { padding:"2px 8px", fontSize:11, border:"0.5px solid #B5D4F4", borderRadius:6, background:"#E6F1FB", color:"#0C447C", cursor:"pointer" },
 };
