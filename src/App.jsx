@@ -572,7 +572,7 @@ function AdminScreen({ onBack }) {
           <p style={{ fontSize: 12, color: "#888", margin: 0 }}>Logged in as {adminName}</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button style={st.backBtn} onClick={onBack}>← App</button>
+          <button style={st.backBtn} onClick={onBack}>← Back to App</button>
           <button style={st.backBtn} onClick={logout}>Log out</button>
         </div>
       </div>
@@ -610,8 +610,10 @@ function AdminScreen({ onBack }) {
             {currentTab?.label} <span style={{ fontWeight: 400, color: "#999", fontSize: 12 }}>({rows.length} entries)</span>
           </span>
           {activeTab !== "audit-log" && (
-            <button style={st.primaryBtn} onClick={() => setFormVisible(v => !v)}>
-              {formVisible ? "Cancel" : "+ Add new"}
+            <button
+              style={formVisible ? st.cancelBtn : st.primaryBtn}
+              onClick={() => { setFormVisible(v => !v); setNewItem({}); }}>
+              {formVisible ? "✕ Cancel" : "+ Add new"}
             </button>
           )}
         </div>
@@ -865,4 +867,5 @@ const st = {
   td:           { padding:"6px 8px", fontSize:12, color:"#333", borderBottom:"0.5px solid #f0f0f0", verticalAlign:"top", maxWidth:200, overflow:"hidden", textOverflow:"ellipsis" },
   delBtn:       { padding:"2px 8px", fontSize:11, border:"0.5px solid #f09595", borderRadius:6, background:"#FCEBEB", color:"#A32D2D", cursor:"pointer" },
   editBtn:      { padding:"2px 8px", fontSize:11, border:"0.5px solid #B5D4F4", borderRadius:6, background:"#E6F1FB", color:"#0C447C", cursor:"pointer" },
+  cancelBtn:    { padding:"9px 20px", fontSize:13, fontWeight:500, border:"0.5px solid #F09595", borderRadius:8, background:"#FCEBEB", color:"#A32D2D", cursor:"pointer" },
 };
